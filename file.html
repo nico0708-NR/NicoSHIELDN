@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Análisis de Archivos{% endblock %}
+{% block page_title %}Análisis de Archivos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-h2">Analizador de Archivos</h2>
+    <p class="page-sub">Calcula hashes criptográficos, detecta el tipo real del archivo y evalúa indicadores de riesgo.</p>
+  </div>
+</div>
+
+<div class="tool-layout">
+  <div class="card tool-input-card">
+    <div class="card-head"><h3>🔍 Seleccionar archivo</h3></div>
+    <form method="POST" enctype="multipart/form-data" class="tool-form">
+      <div class="dropzone" id="dropzone">
+        <input type="file" name="file" id="fileInput" onchange="updateDropzone(this)" />
+        <div class="dz-content" id="dzContent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Arrastra un archivo aquí o <strong>haz click para seleccionar</strong></p>
+          <span class="dz-hint">Máximo 16 MB. El archivo no se almacena en el servidor.</span>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Analizar archivo</button>
+    </form>
+  </div>
+
+  {% if result %}
+  <div class="card result-card">
+    <div class="card-head">
+      <h3>Análisis: {{ result.filename }}</h3>
+      <span class="risk-badge risk-{{ result.risk_level }}">{{ result.risk_level }}</span>
+    </div>
+
+    <!-- File info -->
+    <div class="file-info-grid">
+      <div class="fi-item">
+        <span class="fi-label">Nombre</span>
+        <span class="fi-val mono-text">{{ result.filename }}</span>
+      </div>
+      <div class="fi-item">
+        <span class="fi-label">Tamaño</span>
+        <span class="fi-val mono-text">{{ result.size_human }}</span>
+      </div>
+      <div class="fi-item">
+        <span class="fi-label">Tipo detectado</span>
+        <span class="fi-val">{{ result.magic_type }}</span>
+      </div>
+      <div class="fi-item">
+        <span class="fi-label">Entropía</span>
+        <span class="fi-val mono-text">{{ result.entropy }}/8.0</span>
+      </div>
+    </div>
+
+    <!-- Malicious warning -->
+    {% if result.is_known_malicious %}
+    <div class="alert alert-danger">
+      ☣️ <strong>ARCHIVO CONOCIDO COMO MALICIOSO.</strong> Hash coincide con base de datos de amenazas.
+    </div>
+    {% endif %}
+
+    <!-- Hashes -->
+    <div class="hashes-section">
+      <h4>Hashes criptográficos</h4>
+      <div class="hash-item">
+        <span class="hash-alg">MD5</span>
+        <code class="hash-val" onclick="copyHash(this)">{{ result.md5 }}</code>
+        <button class="copy-btn" onclick="copyHash(this.previousElementSibling)">copiar</button>
+      </div>
+      <div class="hash-item">
+        <span class="hash-alg">SHA-1</span>
+        <code class="hash-val" onclick="copyHash(this)">{{ result.sha1 }}</code>
+        <button class="copy-btn" onclick="copyHash(this.previousElementSibling)">copiar</button>
+      </div>
+      <div class="hash-item">
+        <span class="hash-alg">SHA-256</span>
+        <code class="hash-val" onclick="copyHash(this)">{{ result.sha256 }}</code>
+        <button class="copy-btn" onclick="copyHash(this.previousElementSibling)">copiar</button>
+      </div>
+      <div class="hash-item">
+        <span class="hash-alg">SHA-512</span>
+        <code class="hash-val hash-sm" onclick="copyHash(this)">{{ result.sha512 }}</code>
+        <button class="copy-btn" onclick="copyHash(this.previousElementSibling)">copiar</button>
+      </div>
+    </div>
+
+    <!-- Entropy bar -->
+    <div class="entropy-wrap">
+      <div class="entropy-label">
+        <span>Entropía: {{ result.entropy }}/8.0</span>
+        <span class="entropy-hint">
+          {% if result.entropy > 7.5 %}Muy alta (cifrado/comprimido)
+          {% elif result.entropy > 6 %}Elevada
+          {% elif result.entropy > 4 %}Normal
+          {% else %}Baja (texto plano){% endif %}
+        </span>
+      </div>
+      <div class="entropy-bar">
+        <div class="entropy-fill" style="width: {{ (result.entropy / 8 * 100)|round }}%; background: {% if result.entropy > 7.5 %}#ef4444{% elif result.entropy > 6 %}#f97316{% else %}#22c55e{% endif %}"></div>
+      </div>
+    </div>
+
+    <!-- Indicators -->
+    <div class="indicators-list">
+      <h4>Indicadores de riesgo ({{ result.indicators|length }})</h4>
+      {% for ind in result.indicators %}
+      <div class="indicator indicator-{{ ind.type }}">
+        {% if ind.type == 'danger' %}🔴
+        {% elif ind.type == 'warning' %}🟡
+        {% elif ind.type == 'safe' %}🟢
+        {% else %}🔵{% endif %}
+        {{ ind.msg }}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateDropzone(input) {
+  const f = input.files[0];
+  if (f) {
+    document.getElementById('dzContent').innerHTML =
+      `<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+       <p><strong>${f.name}</strong></p>
+       <span class="dz-hint">${(f.size/1024).toFixed(1)} KB — listo para analizar</span>`;
+    document.getElementById('dropzone').style.borderColor = '#3b82f6';
+  }
+}
+
+function copyHash(el) {
+  navigator.clipboard.writeText(el.textContent.trim()).then(() => {
+    const orig = el.style.color;
+    el.style.color = '#22c55e';
+    setTimeout(() => el.style.color = orig, 900);
+  });
+}
+
+// Drag & drop
+const dz = document.getElementById('dropzone');
+if (dz) {
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dz-hover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dz-hover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dz-hover');
+    const fi = document.getElementById('fileInput');
+    fi.files = e.dataTransfer.files;
+    updateDropzone(fi);
+  });
+}
+</script>
+{% endblock %}

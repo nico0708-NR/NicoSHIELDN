@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Historial{% endblock %}
+{% block page_title %}Historial de análisis{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-h2">Historial de análisis</h2>
+    <p class="page-sub">Registro completo de todos los análisis realizados.</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar card">
+  <form method="GET" class="filter-form">
+    <div class="filter-group">
+      <label>Herramienta</label>
+      <select name="tool" onchange="this.form.submit()" class="form-select">
+        <option value="all" {% if tool_filter=='all' %}selected{% endif %}>Todas</option>
+        <option value="password" {% if tool_filter=='password' %}selected{% endif %}>Contraseña</option>
+        <option value="url"      {% if tool_filter=='url' %}selected{% endif %}>URL</option>
+        <option value="port"     {% if tool_filter=='port' %}selected{% endif %}>Puertos</option>
+        <option value="file"     {% if tool_filter=='file' %}selected{% endif %}>Archivo</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Nivel de riesgo</label>
+      <select name="risk" onchange="this.form.submit()" class="form-select">
+        <option value="all"      {% if risk_filter=='all' %}selected{% endif %}>Todos</option>
+        <option value="none"     {% if risk_filter=='none' %}selected{% endif %}>Ninguno</option>
+        <option value="low"      {% if risk_filter=='low' %}selected{% endif %}>Bajo</option>
+        <option value="medium"   {% if risk_filter=='medium' %}selected{% endif %}>Medio</option>
+        <option value="high"     {% if risk_filter=='high' %}selected{% endif %}>Alto</option>
+        <option value="critical" {% if risk_filter=='critical' %}selected{% endif %}>Crítico</option>
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  {% if logs.items %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Herramienta</th>
+          <th>Input analizado</th>
+          <th>Resultado</th>
+          <th>Riesgo</th>
+          <th>Fecha</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs.items %}
+        <tr>
+          <td class="mono-text text-muted">{{ log.id }}</td>
+          <td><span class="tool-badge tool-{{ log.tool }}">{{ log.tool }}</span></td>
+          <td class="mono-text">{{ log.input_data[:50] }}{% if log.input_data|length > 50 %}…{% endif %}</td>
+          <td>{{ log.result[:60] }}{% if log.result|length > 60 %}…{% endif %}</td>
+          <td><span class="risk-badge risk-{{ log.risk_level }}">{{ log.risk_level }}</span></td>
+          <td class="date-text">{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td><a href="{{ url_for('history_detail', log_id=log.id) }}" class="row-link">Detalle</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if logs.pages > 1 %}
+  <div class="pagination">
+    {% if logs.has_prev %}
+    <a href="{{ url_for('history', page=logs.prev_num, tool=tool_filter, risk=risk_filter) }}" class="page-btn">← Anterior</a>
+    {% endif %}
+    <span class="page-info">Página {{ logs.page }} de {{ logs.pages }}</span>
+    {% if logs.has_next %}
+    <a href="{{ url_for('history', page=logs.next_num, tool=tool_filter, risk=risk_filter) }}" class="page-btn">Siguiente →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <p>No hay análisis que coincidan con los filtros seleccionados.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

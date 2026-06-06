@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Panel Admin{% endblock %}
+{% block page_title %}Panel de Administración{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-h2">Panel de Administración</h2>
+    <p class="page-sub">Visión global del sistema NicoShield.</p>
+  </div>
+</div>
+
+<!-- Global KPIs -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-blue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ stats.total_users }}</span>
+      <span class="kpi-label">Usuarios</span>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-green">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ stats.total_analyses }}</span>
+      <span class="kpi-label">Análisis totales</span>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-orange">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ stats.analyses_today }}</span>
+      <span class="kpi-label">Análisis hoy</span>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-red">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ stats.total_events }}</span>
+      <span class="kpi-label">Eventos de seguridad</span>
+    </div>
+  </div>
+</div>
+
+<div class="admin-grid">
+
+  <!-- Users table -->
+  <div class="card">
+    <div class="card-head"><h3>Usuarios registrados</h3></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>ID</th><th>Usuario</th><th>Email</th><th>Rol</th><th>Estado</th><th>Último login</th><th>Acción</th></tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td class="mono-text">{{ u.id }}</td>
+            <td><strong>{{ u.username }}</strong></td>
+            <td class="mono-text text-muted">{{ u.email }}</td>
+            <td>{% if u.is_admin %}<span class="badge-admin">Admin</span>{% else %}<span class="badge-user">Analista</span>{% endif %}</td>
+            <td>{% if u.is_active %}<span class="text-green">● Activo</span>{% else %}<span class="text-red">● Inactivo</span>{% endif %}</td>
+            <td class="date-text">{{ u.last_login.strftime('%d/%m %H:%M') if u.last_login else '—' }}</td>
+            <td>
+              {% if u.id != current_user.id %}
+              <form method="POST" action="{{ url_for('toggle_user', user_id=u.id) }}" style="display:inline">
+                <button type="submit" class="btn-sm {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                  {% if u.is_active %}Desactivar{% else %}Activar{% endif %}
+                </button>
+              </form>
+              {% else %}
+              <span class="text-muted">Tú</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent analyses (all users) -->
+  <div class="card">
+    <div class="card-head"><h3>Análisis recientes (global)</h3></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Usuario</th><th>Tool</th><th>Input</th><th>Riesgo</th><th>Fecha</th></tr>
+        </thead>
+        <tbody>
+          {% for log in all_logs %}
+          <tr>
+            <td>{{ log.user.username }}</td>
+            <td><span class="tool-badge tool-{{ log.tool }}">{{ log.tool }}</span></td>
+            <td class="mono-text">{{ log.input_data[:35] }}…</td>
+            <td><span class="risk-badge risk-{{ log.risk_level }}">{{ log.risk_level }}</span></td>
+            <td class="date-text">{{ log.created_at.strftime('%d/%m %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Security events -->
+  <div class="card">
+    <div class="card-head"><h3>Eventos de seguridad recientes</h3></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Tipo</th><th>Descripción</th><th>IP</th><th>Fecha</th></tr>
+        </thead>
+        <tbody>
+          {% for ev in events %}
+          <tr>
+            <td>
+              <span class="event-type event-{{ ev.event_type }}">{{ ev.event_type }}</span>
+            </td>
+            <td>{{ ev.description }}</td>
+            <td class="mono-text text-muted">{{ ev.ip_address or '—' }}</td>
+            <td class="date-text">{{ ev.created_at.strftime('%d/%m %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

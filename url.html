@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Detector de Phishing{% endblock %}
+{% block page_title %}Detector de Phishing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-h2">Detector de URLs Sospechosas</h2>
+    <p class="page-sub">Analiza estáticamente una URL en busca de indicadores de phishing y engaño.</p>
+  </div>
+</div>
+
+<div class="tool-layout">
+  <div class="card tool-input-card">
+    <div class="card-head"><h3>🕵️ Ingresa la URL</h3></div>
+    <form method="POST" class="tool-form">
+      <div class="form-group">
+        <label>URL a analizar</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <input type="text" name="url" placeholder="https://ejemplo.com/login"
+                 value="{{ request.form.get('url', '') }}" />
+        </div>
+        <p class="field-hint">El análisis es estático. No se visita la URL ni se hace ninguna petición.</p>
+      </div>
+      <button type="submit" class="btn-primary">Analizar URL</button>
+    </form>
+
+    <div class="examples-box">
+      <p class="examples-title">Ejemplos para probar:</p>
+      <div class="examples-list">
+        <button class="example-pill" onclick="fillUrl('https://paypal-secure-login.tk/verify')">paypal-secure-login.tk</button>
+        <button class="example-pill" onclick="fillUrl('http://192.168.1.1/admin/login')">IP con /admin</button>
+        <button class="example-pill" onclick="fillUrl('https://google.com')">google.com (seguro)</button>
+        <button class="example-pill" onclick="fillUrl('https://amazon-account-suspended.xyz/update-password')">amazon-suspended.xyz</button>
+      </div>
+    </div>
+  </div>
+
+  {% if result %}
+  <div class="card result-card">
+    <div class="card-head"><h3>Resultado del análisis</h3></div>
+
+    {% if result.error is defined %}
+    <div class="alert alert-danger">⚠️ {{ result.error }}</div>
+    {% else %}
+
+    <!-- Risk gauge -->
+    <div class="risk-gauge">
+      <div class="risk-score-big" style="color: {{ result.risk_color }}">{{ result.score }}</div>
+      <div class="risk-label" style="color: {{ result.risk_color }}">{{ result.risk }}</div>
+      <div class="risk-bar-wrap">
+        <div class="risk-bar-fill" style="width:{{ result.score }}%; background: {{ result.risk_color }}"></div>
+      </div>
+      <div class="risk-scale">
+        <span>Segura</span><span>Sospechosa</span><span>Peligrosa</span>
+      </div>
+    </div>
+
+    <!-- URL parsed info -->
+    <div class="url-info-grid">
+      <div class="url-info-item">
+        <span class="ui-label">Dominio</span>
+        <span class="ui-val mono-text">{{ result.domain }}</span>
+      </div>
+      <div class="url-info-item">
+        <span class="ui-label">Protocolo</span>
+        <span class="ui-val mono-text {% if result.scheme == 'https' %}text-green{% else %}text-orange{% endif %}">
+          {{ result.scheme.upper() }}
+        </span>
+      </div>
+      <div class="url-info-item">
+        <span class="ui-label">Ruta</span>
+        <span class="ui-val mono-text">{{ result.path[:60] if result.path else '/' }}</span>
+      </div>
+      <div class="url-info-item">
+        <span class="ui-label">Score de riesgo</span>
+        <span class="ui-val mono-text" style="color:{{ result.risk_color }}">{{ result.score }}/100</span>
+      </div>
+    </div>
+
+    <!-- Indicators -->
+    <div class="indicators-list">
+      <h4>Indicadores encontrados ({{ result.indicators_count }})</h4>
+      {% for ind in result.indicators %}
+      <div class="indicator indicator-{{ ind.type }}">
+        {% if ind.type == 'danger' %}🔴
+        {% elif ind.type == 'warning' %}🟡
+        {% elif ind.type == 'safe' %}🟢
+        {% else %}🔵{% endif %}
+        {{ ind.msg }}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Full URL display -->
+    <div class="url-display">
+      <span class="ud-label">URL completa:</span>
+      <code class="ud-url">{{ result.url }}</code>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fillUrl(url) {
+  document.querySelector('input[name=url]').value = url;
+}
+</script>
+{% endblock %}

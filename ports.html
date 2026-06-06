@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Escáner de Puertos{% endblock %}
+{% block page_title %}Escáner de Puertos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-h2">Escáner de Puertos</h2>
+    <p class="page-sub">Auditoría de red autorizada. <strong>Solo opera en redes privadas (192.168.x.x, 10.x.x.x) o localhost.</strong></p>
+  </div>
+</div>
+
+<div class="warning-banner">
+  ⚠️ <strong>Uso ético y legal:</strong> Escanea únicamente sistemas y redes sobre los que tengas autorización expresa. El uso no autorizado puede ser ilegal.
+</div>
+
+<div class="tool-layout">
+  <div class="card tool-input-card">
+    <div class="card-head"><h3>📡 Configurar escaneo</h3></div>
+    <form method="POST" class="tool-form">
+      <div class="form-group">
+        <label>Host o IP objetivo</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <input type="text" name="target" placeholder="192.168.1.1 o localhost"
+                 value="{{ request.form.get('target', '') }}" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Rango de puertos</label>
+        <select name="port_range" class="form-select">
+          <option value="common" {% if request.form.get('port_range','common')=='common' %}selected{% endif %}>Puertos comunes (~35 servicios)</option>
+          <option value="top100" {% if request.form.get('port_range')=='top100' %}selected{% endif %}>Top 100</option>
+          <option value="1-1024" {% if request.form.get('port_range')=='1-1024' %}selected{% endif %}>1 – 1024 (privilegiados)</option>
+          <option value="1-65535" {% if request.form.get('port_range')=='1-65535' %}selected{% endif %}>Completo 1 – 65535 (lento)</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-primary">Iniciar escaneo</button>
+    </form>
+
+    <div class="examples-box">
+      <p class="examples-title">Targets de ejemplo:</p>
+      <div class="examples-list">
+        <button class="example-pill" onclick="document.querySelector('[name=target]').value='127.0.0.1'">127.0.0.1 (localhost)</button>
+        <button class="example-pill" onclick="document.querySelector('[name=target]').value='192.168.1.1'">192.168.1.1 (router)</button>
+      </div>
+    </div>
+  </div>
+
+  {% if result %}
+  <div class="card result-card">
+    <div class="card-head"><h3>Resultados del escaneo</h3></div>
+
+    {% if result.error is defined %}
+    <div class="alert alert-warning">{{ result.error }}</div>
+    {% else %}
+
+    <!-- Summary -->
+    <div class="scan-summary">
+      <div class="ss-item">
+        <span class="ss-val">{{ result.ip }}</span>
+        <span class="ss-label">IP resuelta</span>
+      </div>
+      <div class="ss-item">
+        <span class="ss-val">{{ result.ports_scanned }}</span>
+        <span class="ss-label">Puertos escaneados</span>
+      </div>
+      <div class="ss-item" style="color: {% if result.open_count > 0 %}#f97316{% else %}#22c55e{% endif %}">
+        <span class="ss-val">{{ result.open_count }}</span>
+        <span class="ss-label">Puertos abiertos</span>
+      </div>
+      <div class="ss-item">
+        <span class="ss-val risk-{{ result.overall_risk }}">{{ result.overall_risk }}</span>
+        <span class="ss-label">Riesgo global</span>
+      </div>
+    </div>
+
+    <!-- Risk breakdown -->
+    <div class="risk-breakdown">
+      {% for level, count in result.risk_counts.items() %}
+      {% if count > 0 %}
+      <span class="rb-item risk-{{ level }}">{{ level }}: {{ count }}</span>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if result.open_ports %}
+    <!-- Ports table -->
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Puerto</th><th>Servicio</th><th>Estado</th><th>Riesgo</th></tr>
+        </thead>
+        <tbody>
+          {% for p in result.open_ports %}
+          <tr>
+            <td class="mono-text">{{ p.port }}/tcp</td>
+            <td>{{ p.service }}</td>
+            <td><span class="status-open">● OPEN</span></td>
+            <td><span class="risk-badge risk-{{ p.risk }}">{{ p.risk }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>✅ No se encontraron puertos abiertos en el rango escaneado.</p>
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-h2">Centro de operaciones</h2>
+    <p class="page-sub">Bienvenido de nuevo, <strong>{{ current_user.username }}</strong>. Aquí está tu resumen de actividad.</p>
+  </div>
+  <div class="header-tools">
+    <a href="{{ url_for('tool_password') }}" class="btn-outline">Nuevo análisis</a>
+  </div>
+</div>
+
+<!-- ── KPI cards ──────────────────────────────────────────────── -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-blue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ stats.total }}</span>
+      <span class="kpi-label">Análisis totales</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-green">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ stats.by_tool.get('password', 0) }}</span>
+      <span class="kpi-label">Contraseñas</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-orange">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ stats.by_tool.get('url', 0) }}</span>
+      <span class="kpi-label">URLs analizadas</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon kpi-red">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <div class="kpi-body">
+      <span class="kpi-value">{{ (stats.by_risk.get('high', 0) + stats.by_risk.get('critical', 0)) }}</span>
+      <span class="kpi-label">Alertas de riesgo</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Charts & recent ────────────────────────────────────────── -->
+<div class="dash-grid">
+
+  <!-- Actividad semanal -->
+  <div class="card card-chart">
+    <div class="card-head">
+      <h3>Actividad — últimos 7 días</h3>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="weekChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Distribución por herramienta -->
+  <div class="card card-donut">
+    <div class="card-head">
+      <h3>Distribución por herramienta</h3>
+    </div>
+    <div class="donut-wrap">
+      <canvas id="toolChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Recent analyses ────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-head">
+    <h3>Análisis recientes</h3>
+    <a href="{{ url_for('history') }}" class="card-link">Ver todos →</a>
+  </div>
+  {% if recent %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Herramienta</th>
+          <th>Input</th>
+          <th>Resultado</th>
+          <th>Riesgo</th>
+          <th>Fecha</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent %}
+        <tr>
+          <td><span class="tool-badge tool-{{ log.tool }}">{{ log.tool }}</span></td>
+          <td class="mono-text">{{ log.input_data[:40] }}{% if log.input_data|length > 40 %}…{% endif %}</td>
+          <td>{{ log.result[:50] }}</td>
+          <td><span class="risk-badge risk-{{ log.risk_level }}">{{ log.risk_level }}</span></td>
+          <td class="date-text">{{ log.created_at.strftime('%d/%m %H:%M') }}</td>
+          <td><a href="{{ url_for('history_detail', log_id=log.id) }}" class="row-link">Ver</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <p>Aún no has realizado análisis. <a href="{{ url_for('tool_password') }}">Empieza ahora</a>.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Quick access tools ─────────────────────────────────────── -->
+<div class="tools-quick-grid">
+  <a href="{{ url_for('tool_password') }}" class="tool-quick-card">
+    <div class="tq-icon">🔐</div>
+    <div class="tq-body">
+      <span class="tq-title">Analizar contraseña</span>
+      <span class="tq-desc">Fortaleza y entropía</span>
+    </div>
+    <svg class="tq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+  <a href="{{ url_for('tool_url') }}" class="tool-quick-card">
+    <div class="tq-icon">🕵️</div>
+    <div class="tq-body">
+      <span class="tq-title">Detectar phishing</span>
+      <span class="tq-desc">Análisis de URLs</span>
+    </div>
+    <svg class="tq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+  <a href="{{ url_for('tool_ports') }}" class="tool-quick-card">
+    <div class="tq-icon">📡</div>
+    <div class="tq-body">
+      <span class="tq-title">Escanear puertos</span>
+      <span class="tq-desc">Auditoría de red local</span>
+    </div>
+    <svg class="tq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+  <a href="{{ url_for('tool_file') }}" class="tool-quick-card">
+    <div class="tq-icon">🔍</div>
+    <div class="tq-body">
+      <span class="tq-title">Analizar archivo</span>
+      <span class="tq-desc">Hashes + entropía</span>
+    </div>
+    <svg class="tq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const weekLabels = {{ stats.week_data | map(attribute='day') | list | tojson }};
+const weekCounts = {{ stats.week_data | map(attribute='count') | list | tojson }};
+const toolData   = {{ stats.by_tool | tojson }};
+
+// ── Week activity bar chart ────────────────────────────────────
+const wCtx = document.getElementById('weekChart').getContext('2d');
+new Chart(wCtx, {
+  type: 'bar',
+  data: {
+    labels: weekLabels,
+    datasets: [{
+      label: 'Análisis',
+      data: weekCounts,
+      backgroundColor: 'rgba(59,130,246,0.25)',
+      borderColor: '#3b82f6',
+      borderWidth: 2,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' },
+           ticks: { color: '#7a8599' } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' },
+           ticks: { color: '#7a8599', stepSize: 1 },
+           beginAtZero: true }
+    }
+  }
+});
+
+// ── Tool donut chart ───────────────────────────────────────────
+const tCtx = document.getElementById('toolChart').getContext('2d');
+const toolLabels = Object.keys(toolData);
+const toolCounts = Object.values(toolData);
+if (toolLabels.length > 0) {
+  new Chart(tCtx, {
+    type: 'doughnut',
+    data: {
+      labels: toolLabels.map(t => ({password:'Contraseña',url:'URL',port:'Puertos',file:'Archivo'}[t]||t)),
+      datasets: [{
+        data: toolCounts,
+        backgroundColor: ['#3b82f6','#f97316','#22c55e','#a78bfa'],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#7a8599', padding: 16, font: { size: 12 } }
+        }
+      },
+      cutout: '68%',
+    }
+  });
+} else {
+  document.querySelector('.donut-wrap').innerHTML =
+    '<p style="color:#7a8599;text-align:center;margin-top:60px">Sin datos aún</p>';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Detalle #{{ log.id }}{% endblock %}
+{% block page_title %}Detalle del análisis{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2 class="page-h2">Análisis #{{ log.id }}</h2>
+    <p class="page-sub">{{ log.created_at.strftime('%d de %B de %Y a las %H:%M UTC') }}</p>
+  </div>
+  <a href="{{ url_for('history') }}" class="btn-outline">← Volver al historial</a>
+</div>
+
+<div class="detail-grid">
+  <div class="card">
+    <div class="card-head"><h3>Información general</h3></div>
+    <div class="detail-rows">
+      <div class="dr"><span class="dr-label">ID</span><span class="dr-val mono-text">{{ log.id }}</span></div>
+      <div class="dr"><span class="dr-label">Herramienta</span><span class="dr-val"><span class="tool-badge tool-{{ log.tool }}">{{ log.tool }}</span></span></div>
+      <div class="dr"><span class="dr-label">Input</span><span class="dr-val mono-text">{{ log.input_data }}</span></div>
+      <div class="dr"><span class="dr-label">Resultado</span><span class="dr-val">{{ log.result }}</span></div>
+      <div class="dr"><span class="dr-label">Riesgo</span><span class="dr-val"><span class="risk-badge risk-{{ log.risk_level }}">{{ log.risk_level }}</span></span></div>
+      <div class="dr"><span class="dr-label">IP</span><span class="dr-val mono-text">{{ log.ip_address or '—' }}</span></div>
+      <div class="dr"><span class="dr-label">Fecha</span><span class="dr-val date-text">{{ log.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</span></div>
+    </div>
+  </div>
+
+  {% if details %}
+  <div class="card">
+    <div class="card-head"><h3>Detalles técnicos</h3></div>
+    <pre class="json-output">{{ details | tojson(indent=2) }}</pre>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
